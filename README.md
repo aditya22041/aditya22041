@@ -5,6 +5,8 @@
 - 📫 mail me on aditya22041@iiitd.ac.in ...
 - 
 - ⚡ Fun fact: Im quite interesred in humanities and philoshophy
+## 📊 GitHub Stats
+![GitHub stats](https://github-readme-stats.vercel.app/api?username=aditya22041&show_icons=true&theme=radical)
 
 <!---
 aditya22041/aditya22041 is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.

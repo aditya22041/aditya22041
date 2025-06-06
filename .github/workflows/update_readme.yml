@@ -1,38 +1,73 @@
 name: Update README with Random Quote
 
+# This workflow runs once per day (midnight UTC),
+# and can also be triggered manually (workflow_dispatch).
 on:
   schedule:
-    - cron: '0 0 * * *'   # runs daily at midnight UTC; adjust if you like
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}
 
 jobs:
   update-quote:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Fetch a random "humor" quote
         id: fetch_quote
         run: |
-          # We do not need an API key—Quotable is free to use.
+          # 1) Get a random quote from Quotable (no API key needed)
           RESPONSE=$(curl -s "https://api.quotable.io/random?tags=humor")
+          
+          # 2) Extract .content and .author using jq
           CONTENT=$(echo "$RESPONSE" | jq -r '.content')
           AUTHOR=$(echo "$RESPONSE" | jq -r '.author')
-          # Build a Markdown block with an ASCII dash (not a fancy unicode dash):
-          FORMATTED="> \"$CONTENT\"  \n> — $AUTHOR"
-          echo "::set-output name=quote::$FORMATTED"
+          
+          # 3) Build a Markdown snippet with an ASCII dash. Note: \n must be literal in the string.
+          QUOTE="> \"$CONTENT\"\n> — $AUTHOR"
+          
+          # 4) Export that as the step output called "quote"
+          echo "::set-output name=quote::$QUOTE"
+          
+          # 5) (Optional) Print for debugging
+          echo "Fetched quote (with literal \\n):"
+          echo -e "$QUOTE"
 
       - name: Replace placeholder in README.md
         run: |
-          QUOTE="${{ steps.fetch_quote.outputs.quote }}"
+          # Grab the raw quote (contains literal "\n") from the previous step
+          RAW_QUOTE="${{ steps.fetch_quote.outputs.quote }}"
+          
+          # For debugging, show exactly what RAW_QUOTE looks like:
+          echo "=== DEBUG: RAW_QUOTE ==="
+          echo -e "$RAW_QUOTE"
+          echo "=== END DEBUG ==="
+          
+          # Now, we must escape any backslashes before passing into sed,
+          # because sed's replacement text is also using backslash+newline.
+          ESCAPED=$(printf '%s' "$RAW_QUOTE" | sed 's/\\/\\\\/g')
+          
+          # Here is the sed command, carefully written:
           #
-          # Use a single-quoted sed script, and escape each literal backslash-newline
-          # so that YAML doesn’t interpret it as “another mapping key.”
+          #   /<!--QUOTE_START-->/, /<!--QUOTE_END-->/c\
+          #   <!--QUOTE_START-->\
+          #   (the quote lines go here)\
+          #   <!--QUOTE_END-->
           #
+          # Each literal "\" at the end of a line tells sed "the replacement continues on the next line."
           sed -i '/<!--QUOTE_START-->/, /<!--QUOTE_END-->/c\
 <!--QUOTE_START-->\
-'"$QUOTE"'\
+'"$ESCAPED"'\
 <!--QUOTE_END-->' README.md
+          
+          # Show the lines around the placeholder so you can verify 
+          echo "=== README.md snippet after sed ==="
+          grep -nE "<!--QUOTE_START-->|<!--QUOTE_END-->" README.md || true
+          echo "=== END SNIPPET ==="
 
       - name: Commit & Push changes
         env:
@@ -40,8 +75,12 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git diff --quiet README.md || (
+          
+          # Only commit if there really was a change to README.md
+          if ! git diff --quiet README.md; then
             git add README.md
-            git commit -m "chore: update random quote"
+            git commit -m "chore: update random quote in README"
             git push
-          )
+          else
+            echo "No changes to commit."
+          fi

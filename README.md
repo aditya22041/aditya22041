@@ -8,7 +8,6 @@
 ## 📊 GitHub Stats
 ![GitHub stats](https://github-readme-stats.vercel.app/api?username=aditya22041&show_icons=true&theme=radical)
 
----
 
 ## And Remember
 

@@ -1,0 +1,56 @@
+name: Update README with Random Quote
+
+# Run every day at midnight UTC (you can tweak the cron as you like):
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  update-quote:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Check out the repository so we can modify README.md
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2) Fetch a random “humor” quote (you can swap tags=humor to author=napoleon-bonaparte)
+      - name: Fetch a random “humor” quote
+        id: fetch_quote
+        run: |
+          # You can choose ANY Quotable endpoint. Below uses the “humor” tag:
+          RESPONSE=$(curl -s "https://api.quotable.io/random?tags=humor")
+          # Extract “content” and “author” fields from JSON:
+          CONTENT=$(echo "$RESPONSE" | jq -r '.content')
+          AUTHOR=$(echo "$RESPONSE" | jq -r '.author')
+          # Build a Markdown-style block (escaping quotes if needed):
+          FORMATTED="> \"${CONTENT}\"  \n> — ${AUTHOR}"
+          echo "::set-output name=quote::$FORMATTED"
+
+      # 3) Replace the placeholder in README.md
+      - name: Replace placeholder in README.md
+        run: |
+          # We know README.md has markers <!--QUOTE_START--> and <!--QUOTE_END-->
+          # First, grab the quote from the previous step:
+          QUOTE="${{ steps.fetch_quote.outputs.quote }}"
+
+          # Use sed to replace everything between the markers:
+          #   - ‘/<!--QUOTE_START-->/,/<!--QUOTE_END-->/c\…’ means “take lines from the start marker
+          #     to the end marker, and replace them all with this new block.”
+          sed -i "/<!--QUOTE_START-->/, /<!--QUOTE_END-->/c\\
+<!--QUOTE_START-->\\
+${QUOTE}  \\
+<!--QUOTE_END-->" README.md
+
+      # 4) Commit & push back to the default branch
+      - name: Commit & Push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          # Only commit if README.md changed:
+          git diff --exit-code README.md || ( \
+            git add README.md && \
+            git commit -m "chore: update random quote in README" && \
+            git push \
+          )

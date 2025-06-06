@@ -10,7 +10,7 @@
 
 ---
 
-## 😂 Random Dev/Napoleon Quote
+## And Remember
 
 <!--QUOTE_START-->
 > “Fetching a funny quote… ⏳”

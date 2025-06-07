@@ -10,9 +10,7 @@
 
 
 ## And Remember
+![Funny Quote](https://readme-jokes.vercel.app/api?hideBorder&theme=radical)
 
-<!--QUOTE_START-->
-> “Fetching a funny quote… ⏳”
-<!--QUOTE_END-->
 
 ---
